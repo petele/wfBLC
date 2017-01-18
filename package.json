@@ -1,0 +1,24 @@
+{
+  "name": "wfBLC",
+  "version": "1.0.0",
+  "description": "Broken Link Checker for Web Central",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/google/WebFundamentals.git"
+  },
+  "keywords": [],
+  "homepage": "https://github.com/google/WebFundamentals",
+  "devDependencies": {},
+  "private": true,
+  "dependencies": {
+    "broken-link-checker": "^0.7.4",
+    "chalk": "^1.1.3",
+    "google-auth-library": "^0.10.0",
+    "googleapis": "^16.1.0",
+    "moment": "^2.17.1",
+    "readline": "^1.3.0"
+  },
+  "scripts": {
+    "start": "node go.js"
+  }
+}

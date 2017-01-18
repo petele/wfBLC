@@ -35,7 +35,7 @@ let opts = {
   excludeExternalLinks: false,
   filterLevel: 3,
   honorRobotExclusions: false,
-  rateLimit: 125,
+  rateLimit: 75,
   requestMethod: 'get' 
 };
 
@@ -66,8 +66,10 @@ function handleUrlResult(result) {
     logBrokenLink('ERROR', resolved, original, result.brokenReason);
   } else if (result.excluded) {
     pageData.linkExcluded++;
+    console.log('->', chalk.yellow(padString('SKIPPED')), url, result.excludedReason);
   } else {
     pageData.linkOK++;
+    console.log('->', chalk.green(padString('OK')), url);
   }
 }
 

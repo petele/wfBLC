@@ -30,7 +30,7 @@ console.log('Started at:', chalk.cyan(startedAt));
 console.log('');
 
 let opts = {
-  cacheExpiryTime: 2 * 60 * 60 * 1000,
+  cacheExpiryTime: 3 * 60 * 60 * 1000,
   cacheResponses: true,
   excludedKeywords: [],
   excludedSchemes: [],

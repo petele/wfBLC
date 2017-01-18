@@ -61,15 +61,16 @@ function handleUrlResult(result) {
   let msg = '';
   let resolved = result.url.resolved;
   let original = result.url.original;
+  let simpleUrl = resolved || original;
   if (result.broken) {
     pageData.linkBroken++;
     logBrokenLink('ERROR', resolved, original, result.brokenReason);
   } else if (result.excluded) {
     pageData.linkExcluded++;
-    console.log('->', chalk.yellow(padString('SKIPPED')), url, result.excludedReason);
+    console.log('->', chalk.yellow(padString('SKIPPED')), simpleUrl, result.excludedReason);
   } else {
     pageData.linkOK++;
-    console.log('->', chalk.green(padString('OK')), url);
+    console.log('->', chalk.green(padString('OK')), simpleUrl);
   }
 }
 

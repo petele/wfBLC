@@ -37,7 +37,7 @@ let opts = {
   excludeExternalLinks: false,
   filterLevel: 3,
   honorRobotExclusions: false,
-  rateLimit: 25,
+  rateLimit: 10,
   requestMethod: 'get' 
 };
 
@@ -90,6 +90,7 @@ function saveSummary() {
   console.log('Broken Link Check Completed.');
   let finishedAt = moment().format();
   console.log('Finished at:', chalk.cyan(finishedAt));
+  console.log('Checked', chalk.cyan(pagesCompleted), 'pages.');
   console.log('');
   let res = {
     range: 'Summary!B3',
@@ -191,7 +192,7 @@ let handlers = {
     }
     logPageCompleted();
   },
-  end: function() { console.log('end'); },
+  end: function() { process.exit(0); },
   robots: function() { console.log('robots'); },
   site: saveSummary
 };

@@ -10,15 +10,13 @@ let googleAuth = require('google-auth-library');
 
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
+const VERBOSE = false;
 const SITE_URL = 'https://web-central.appspot.com/web/';
 const SPREADSHEET_ID = '1ObBKWXu0KQ7yaew8VvG-eArXXyIX64sSSseXRZRADuU';
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
 const TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
     process.env.USERPROFILE) + '/.credentials/';
 const TOKEN_PATH = TOKEN_DIR + 'sheets.googleapis.com-blc.json';
-
-console.log('Broken Link Checker for', chalk.bold('/web'));
-console.log('');
 
 let pageData;
 let authToken;
@@ -27,15 +25,19 @@ let pagesCompleted = 0;
 let startedAt = moment().format();
 let sheets = google.sheets('v4');
 
+console.log('Broken Link Checker for', chalk.bold('/web'));
+console.log('Started at:', chalk.cyan(startedAt));
+console.log('');
+
 let opts = {
-  cacheExpiryTime: 7200000,
+  cacheExpiryTime: 2 * 60 * 60 * 1000,
   cacheResponses: true,
   excludedKeywords: [],
   excludedSchemes: [],
   excludeExternalLinks: false,
   filterLevel: 3,
   honorRobotExclusions: false,
-  rateLimit: 75,
+  rateLimit: 25,
   requestMethod: 'get' 
 };
 
@@ -58,7 +60,6 @@ function resetPageData(pageUrl) {
 function handleUrlResult(result) {
   pageData.linkCount++;
   let status;
-  let msg = '';
   let resolved = result.url.resolved;
   let original = result.url.original;
   let simpleUrl = resolved || original;
@@ -67,10 +68,20 @@ function handleUrlResult(result) {
     logBrokenLink('ERROR', resolved, original, result.brokenReason);
   } else if (result.excluded) {
     pageData.linkExcluded++;
-    console.log('->', chalk.yellow(padString('SKIPPED')), simpleUrl, chalk.gray(result.excludedReason));
+    if (VERBOSE) {
+      status = chalk.yellow(padString('SKIPPED'));
+      let reason = chalk.gray(result.excludedReason)
+      console.log('->', status, simpleUrl, reason);
+    }
   } else {
     pageData.linkOK++;
-    console.log('->', chalk.green(padString('OK')), simpleUrl);
+    if (VERBOSE) {
+      status = chalk.green(padString('OK'));
+      if (result.http.cached === true) {
+        status = chalk.green(padString('CACHED'));
+      }
+      console.log('->', status, simpleUrl);
+    }
   }
 }
 
@@ -78,6 +89,8 @@ function saveSummary() {
   console.log('');
   console.log('Broken Link Check Completed.');
   let finishedAt = moment().format();
+  console.log('Finished at:', chalk.cyan(finishedAt));
+  console.log('');
   let res = {
     range: 'Summary!B3',
     majorDimension: 'ROWS',
@@ -113,7 +126,9 @@ function saveErrorsToSheet() {
       valueInputOption: 'USER_ENTERED',
       resource: resource
     }, function(err, response) {
-
+      if (err) {
+        console.log(chalk.red('saveErrorsToSheet FAILED'), err);
+      }
     });
   }
 }
@@ -152,7 +167,9 @@ function logPageCompleted() {
     valueInputOption: 'USER_ENTERED',
     resource: resource
   }, function(err, response) {
-
+    if (err) {
+      console.log(chalk.red('logPageCompleted FAILED'), err);
+    }
   });
 }
 
@@ -166,7 +183,10 @@ let handlers = {
     if (error) {
       resetPageData(pageUrl);
       if (error.code !== 200) {
-        logBrokenLink('ERROR', '', '', error.message);
+        pageData.linkCount++;
+        pageData.linkBroken++;
+        let errorCode = 'HTTP_' + error.code;
+        logBrokenLink('ERROR', error.message, '', errorCode);
       }
     }
     logPageCompleted();
@@ -180,7 +200,7 @@ let handlers = {
 // Load client secrets from a local file.
 fs.readFile('client_secret.json', function processClientSecrets(err, content) {
   if (err) {
-    console.log('Error loading client secret file: ' + err);
+    console.log(chalk.red('Error loading client secret file: '), err);
     return;
   }
   // Authorize a client with the loaded credentials, then call the
@@ -271,7 +291,7 @@ function readRange(range) {
       range: range,
     }, function(err, response) {
       if (err) {
-        console.log('readRange FAILED', err);
+        console.log(chalk.red('readRange FAILED'), err);
         reject(err);
       }
       resolve(response.values);
@@ -289,7 +309,7 @@ function updateSheet(resource) {
       resource: resource
     }, function(err, response) {
       if (err) {
-        console.log('updateSheet FAILED', err);
+        console.log(chalk.red('updateSheet FAILED'), err);
         reject(err);
       }
       resolve(response);
@@ -437,7 +457,7 @@ function resetWorkbook(workbook) {
       resource: batchUpdateRequest
     }, function(err, response) {
       if (err) {
-        console.log('resetWorkbook FAILED', err);
+        console.log(chalk.red('resetWorkbook FAILED'), err);
         reject(err);
       }
       console.log('->', 'Workbook reset');
@@ -452,7 +472,7 @@ function getExcludes() {
   return new Promise(function(resolve, reject) {
     readRange('ExcludeKeywords!A2:B')
       .then(function(rows) {
-        if (rows.length !== 0) {
+        if (rows && rows.length > 0) {
           rows.forEach(function(row) {
             if (row[0]) {
               let urlExclude = row[0].trim();
@@ -490,7 +510,7 @@ function onAuthorized(auth) {
       siteChecker.enqueue(SITE_URL);
     })
     .catch(function(err) {
-      console.log('CRITIAL FAILURE in onAuthorized.');
+      console.log(chalk.red('CRITIAL FAILURE in onAuthorized.'));
       console.log(err);
     });
 }

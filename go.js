@@ -18,6 +18,7 @@ const TOKEN_DIR = (process.env.HOME || process.env.HOMEPATH ||
     process.env.USERPROFILE) + '/.credentials/';
 const TOKEN_PATH = TOKEN_DIR + 'sheets.googleapis.com-blc.json';
 
+let sheetOpsInProgress = 0;
 let pageData;
 let authToken;
 let siteChecker;
@@ -120,6 +121,7 @@ function saveErrorsToSheet() {
       majorDimension: 'ROWS',
       values: pageData.brokenLinks
     }
+    sheetOpsInProgress++;
     sheets.spreadsheets.values.append({
       auth: authToken,
       spreadsheetId: SPREADSHEET_ID,
@@ -130,6 +132,7 @@ function saveErrorsToSheet() {
       if (err) {
         console.log(chalk.red('saveErrorsToSheet FAILED'), err);
       }
+      sheetOpsInProgress--;
     });
   }
 }
@@ -161,6 +164,7 @@ function logPageCompleted() {
       pageData.linkExcluded
     ]]
   }
+  sheetOpsInProgress++;
   sheets.spreadsheets.values.append({
     auth: authToken,
     spreadsheetId: SPREADSHEET_ID,
@@ -171,6 +175,7 @@ function logPageCompleted() {
     if (err) {
       console.log(chalk.red('logPageCompleted FAILED'), err);
     }
+    sheetOpsInProgress--;
   });
 }
 
@@ -192,10 +197,18 @@ let handlers = {
     }
     logPageCompleted();
   },
-  end: function() { process.exit(0); },
+  end: exitWhenDone,
   robots: function() { console.log('robots'); },
   site: saveSummary
 };
+
+function exitWhenDone() {
+  console.log('Sheet operations in progress', chalk.cyan(sheetOpsInProgress));
+  if (sheetOpsInProgress === 0) {
+    process.exit(0);
+  }
+  setTimeout(exitWhenDone, 750);
+}
 
 
 // Load client secrets from a local file.
@@ -286,6 +299,7 @@ function storeToken(token) {
 
 function readRange(range) {
   return new Promise(function(resolve, reject) {
+    sheetOpsInProgress++;
     sheets.spreadsheets.values.get({
       auth: authToken,
       spreadsheetId: SPREADSHEET_ID,
@@ -295,6 +309,7 @@ function readRange(range) {
         console.log(chalk.red('readRange FAILED'), err);
         reject(err);
       }
+      sheetOpsInProgress--;
       resolve(response.values);
     });  
   });
@@ -302,6 +317,7 @@ function readRange(range) {
 
 function updateSheet(resource) {
   return new Promise(function(resolve, reject) {
+    sheetOpsInProgress++;
     sheets.spreadsheets.values.update({
       auth: authToken,
       spreadsheetId: SPREADSHEET_ID,
@@ -313,6 +329,7 @@ function updateSheet(resource) {
         console.log(chalk.red('updateSheet FAILED'), err);
         reject(err);
       }
+      sheetOpsInProgress--;
       resolve(response);
     });
   });
@@ -452,6 +469,7 @@ function resetWorkbook(workbook) {
     });
 
     let batchUpdateRequest = {requests: requests};
+    sheetOpsInProgress++;
     sheets.spreadsheets.batchUpdate({
       auth: authToken,
       spreadsheetId: SPREADSHEET_ID,
@@ -463,6 +481,7 @@ function resetWorkbook(workbook) {
       }
       console.log('->', 'Workbook reset');
       console.log('');
+      sheetOpsInProgress--;
       resolve(response);
     });
   });

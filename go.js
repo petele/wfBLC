@@ -22,13 +22,21 @@ let sheetOpsInProgress = 0;
 let pageData;
 let authToken;
 let siteChecker;
-let pagesCompleted = 0;
 let startedAt = moment().format();
 let sheets = google.sheets('v4');
 
 console.log('Broken Link Checker for', chalk.bold('/web'));
 console.log('Started at:', chalk.cyan(startedAt));
 console.log('');
+
+let testResults = {
+  urlsChecked: 0,
+  linksTotal: 0,
+  linksOK: 0,
+  linksBroken: {},
+  linksSkipped: {},
+  urlsWithErrors: 0,
+}
 
 let opts = {
   cacheExpiryTime: 3 * 60 * 60 * 1000,
@@ -66,9 +74,11 @@ function handleUrlResult(result) {
   let simpleUrl = resolved || original;
   if (result.broken) {
     pageData.linkBroken++;
+    testResults.linksBroken[simpleUrl] = true;
     logBrokenLink('ERROR', resolved, original, result.brokenReason);
   } else if (result.excluded) {
     pageData.linkExcluded++;
+    testResults.linksSkipped[simpleUrl] = true;
     if (VERBOSE) {
       status = chalk.yellow(padString('SKIPPED'));
       let reason = chalk.gray(result.excludedReason)
@@ -91,16 +101,24 @@ function saveSummary() {
   console.log('Broken Link Check Completed.');
   let finishedAt = moment().format();
   console.log('Finished at:', chalk.cyan(finishedAt));
-  console.log('Checked', chalk.cyan(pagesCompleted), 'pages.');
+  console.log('Checked', chalk.cyan(testResults.urlsChecked), 'pages.');
   console.log('');
+  let brokenLinkCount = Object.keys(testResults.linksBroken).length;
+  let skippedLinkCount = Object.keys(testResults.linksSkipped).length;
   let res = {
-    range: 'Summary!B3',
+    range: 'Summary!A4',
     majorDimension: 'ROWS',
-    values: [
-      ['Finished'],
-      [startedAt],
-      [finishedAt]
-    ]
+    values: [[
+      'Finished',
+      startedAt,
+      finishedAt,
+      testResults.urlsChecked,
+      testResults.urlsWithErrors,
+      testResults.linksTotal,
+      testResults.linksOK,
+      brokenLinkCount,
+      skippedLinkCount
+    ]]
   }
   return updateSheet(res);
 }
@@ -139,15 +157,20 @@ function saveErrorsToSheet() {
 
 function logPageCompleted() {
   saveErrorsToSheet();
-  pagesCompleted++;
+  testResults.urlsChecked++;
+  if (pageData.linkBroken > 0) {
+    testResults.urlsWithErrors++;
+  }
+  testResults.linksTotal += pageData.linkCount;
+  testResults.linksOK += pageData.linkOK;
   let msg = '';
   msg += 'Links: ' + chalk.cyan(pageData.linkCount) + ' | ';
   msg += 'OK: ' + chalk.green(pageData.linkOK) + ' | ';
   msg += 'Broken: ' + chalk.red(pageData.linkBroken) + ' | ';
-  msg += 'Skipped: ' + chalk.yellow(pageData.linkExcluded) + ' | ';
+  msg += 'Skipped: ' + chalk.yellow(pageData.linkExcluded);
   console.log('', msg);
-  msg = 'Pages Completed: ' + chalk.cyan(pagesCompleted) + ' | ';
-  msg += 'In Queue: ' + chalk.cyan(siteChecker.numPages());
+  msg = 'Pages Completed: ' + chalk.cyan(testResults.urlsChecked) + ' of ';
+  msg += chalk.cyan(siteChecker.numPages() + testResults.urlsChecked);
   console.log('', msg);
   console.log('');
   let range = 'Pages!A2:E2';
@@ -191,6 +214,7 @@ let handlers = {
       if (error.code !== 200) {
         pageData.linkCount++;
         pageData.linkBroken++;
+        testResults.linksBroken[pageUrl] = true;
         let errorCode = 'HTTP_' + error.code;
         logBrokenLink('ERROR', error.message, '', errorCode);
       }
@@ -341,17 +365,13 @@ function resetWorkbook(workbook) {
     var requests = [];
     // Summary Page
     requests.push({
-      updateCells: {
-        start: {sheetId: 635298754, rowIndex: 2, columnIndex: 0},
-        rows: [{
-          values: [{
-            userEnteredValue: {stringValue: 'Current Status'},
-            userEnteredFormat: {textFormat: {bold: true}}
-          }, {
-            userEnteredValue: {stringValue: 'Running'},
-          }]
-        }],
-        fields: 'userEnteredValue,userEnteredFormat.textFormat'
+      insertDimension: {
+        range: {
+          sheetId: 635298754,
+          dimension: 'ROWS',
+          startIndex: 3,
+          endIndex: 4
+        }
       }
     });
     requests.push({
@@ -359,27 +379,12 @@ function resetWorkbook(workbook) {
         start: {sheetId: 635298754, rowIndex: 3, columnIndex: 0},
         rows: [{
           values: [{
-            userEnteredValue: {stringValue: 'Started At'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredValue: {stringValue: 'Running'},
           }, {
             userEnteredValue: {stringValue: moment().format()},
           }]
         }],
-        fields: 'userEnteredValue,userEnteredFormat.textFormat'
-      }
-    });
-    requests.push({
-      updateCells: {
-        start: {sheetId: 635298754, rowIndex: 4, columnIndex: 0},
-        rows: [{
-          values: [{
-            userEnteredValue: {stringValue: 'Finished At'},
-            userEnteredFormat: {textFormat: {bold: true}}
-          }, {
-            userEnteredValue: {stringValue: ''},
-          }]
-        }],
-        fields: 'userEnteredValue,userEnteredFormat.textFormat'
+        fields: 'userEnteredValue'
       }
     });
     // Errors

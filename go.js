@@ -1,12 +1,12 @@
 'use strict';
 
-let fs = require('fs');
-let blc = require('broken-link-checker');
-let chalk = require('chalk');
-let readline = require('readline');
-let google = require('googleapis');
-let moment = require('moment');
-let googleAuth = require('google-auth-library');
+const fs = require('fs');
+const chalk = require('chalk');
+const moment = require('moment');
+const readline = require('readline');
+const google = require('googleapis');
+const blc = require('broken-link-checker');
+const GoogleAuth = require('google-auth-library');
 
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
@@ -36,7 +36,7 @@ let testResults = {
   linksBroken: {},
   linksSkipped: {},
   urlsWithErrors: 0,
-}
+};
 
 let opts = {
   cacheExpiryTime: 3 * 60 * 60 * 1000,
@@ -47,8 +47,9 @@ let opts = {
   filterLevel: 3,
   honorRobotExclusions: false,
   rateLimit: 10,
+  maxSocketsPerHost: 1,
   requestMethod: 'get',
-  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.76 Safari/537.36'
+  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.24 Safari/537.36'
 };
 
 function padString(msg) {
@@ -63,7 +64,7 @@ function resetPageData(pageUrl) {
     linkOK: 0,
     linkBroken: 0,
     linkExcluded: 0,
-    brokenLinks: []
+    brokenLinks: [],
   };
 }
 
@@ -82,7 +83,7 @@ function handleUrlResult(result) {
     testResults.linksSkipped[simpleUrl] = true;
     if (VERBOSE) {
       status = chalk.yellow(padString('SKIPPED'));
-      let reason = chalk.gray(result.excludedReason)
+      let reason = chalk.gray(result.excludedReason);
       console.log('->', status, simpleUrl, reason);
     }
   } else {
@@ -118,9 +119,9 @@ function saveSummary() {
       testResults.linksTotal,
       testResults.linksOK,
       brokenLinkCount,
-      skippedLinkCount
-    ]]
-  }
+      skippedLinkCount,
+    ]],
+  };
   return updateSheet(res);
 }
 
@@ -138,15 +139,15 @@ function saveErrorsToSheet() {
     let resource = {
       range: range,
       majorDimension: 'ROWS',
-      values: pageData.brokenLinks
-    }
+      values: pageData.brokenLinks,
+    };
     sheetOpsInProgress++;
     sheets.spreadsheets.values.append({
       auth: authToken,
       spreadsheetId: SPREADSHEET_ID,
       range: range,
       valueInputOption: 'USER_ENTERED',
-      resource: resource
+      resource: resource,
     }, function(err, response) {
       if (err) {
         console.log(chalk.red('saveErrorsToSheet FAILED'), err);
@@ -185,16 +186,16 @@ function logPageCompleted() {
       pageData.linkCount,
       pageData.linkOK,
       pageData.linkBroken,
-      pageData.linkExcluded
-    ]]
-  }
+      pageData.linkExcluded,
+    ]],
+  };
   sheetOpsInProgress++;
   sheets.spreadsheets.values.append({
     auth: authToken,
     spreadsheetId: SPREADSHEET_ID,
     range: range,
     valueInputOption: 'USER_ENTERED',
-    resource: resource
+    resource: resource,
   }, function(err, response) {
     if (err) {
       console.log(chalk.red('logPageCompleted FAILED'), err);
@@ -224,7 +225,7 @@ let handlers = {
   },
   end: exitWhenDone,
   robots: function() { console.log('robots'); },
-  site: saveSummary
+  site: saveSummary,
 };
 
 function exitWhenDone() {
@@ -256,11 +257,11 @@ fs.readFile('client_secret.json', function processClientSecrets(err, content) {
  */
 function authorize(credentials, callback) {
   console.log('Authorizing...');
-  var clientSecret = credentials.installed.client_secret;
-  var clientId = credentials.installed.client_id;
-  var redirectUrl = credentials.installed.redirect_uris[0];
-  var auth = new googleAuth();
-  var oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUrl);
+  const clientSecret = credentials.installed.client_secret;
+  const clientId = credentials.installed.client_id;
+  const redirectUrl = credentials.installed.redirect_uris[0];
+  const auth = new GoogleAuth();
+  const oauth2Client = new auth.OAuth2(clientId, clientSecret, redirectUrl);
 
   // Check if we have previously stored a token.
   fs.readFile(TOKEN_PATH, function(err, token) {
@@ -282,14 +283,14 @@ function authorize(credentials, callback) {
  *     client.
  */
 function getNewToken(oauth2Client, callback) {
-  var authUrl = oauth2Client.generateAuthUrl({
+  const authUrl = oauth2Client.generateAuthUrl({
     access_type: 'offline',
-    scope: SCOPES
+    scope: SCOPES,
   });
   console.log('Authorize this app by visiting this url: ', authUrl);
-  var rl = readline.createInterface({
+  const rl = readline.createInterface({
     input: process.stdin,
-    output: process.stdout
+    output: process.stdout,
   });
   rl.question('Enter the code from that page here: ', function(code) {
     rl.close();
@@ -336,7 +337,7 @@ function readRange(range) {
       }
       sheetOpsInProgress--;
       resolve(response.values);
-    });  
+    });
   });
 }
 
@@ -348,7 +349,7 @@ function updateSheet(resource) {
       spreadsheetId: SPREADSHEET_ID,
       range: resource.range,
       valueInputOption: 'USER_ENTERED',
-      resource: resource
+      resource: resource,
     }, function(err, response) {
       if (err) {
         console.log(chalk.red('updateSheet FAILED'), err);
@@ -363,7 +364,7 @@ function updateSheet(resource) {
 function resetWorkbook(workbook) {
   console.log('Resetting workbook...');
   return new Promise(function(resolve, reject) {
-    var requests = [];
+    let requests = [];
     // Summary Page
     requests.push({
       insertDimension: {
@@ -371,9 +372,9 @@ function resetWorkbook(workbook) {
           sheetId: 635298754,
           dimension: 'ROWS',
           startIndex: 3,
-          endIndex: 4
-        }
-      }
+          endIndex: 4,
+        },
+      },
     });
     requests.push({
       updateCells: {
@@ -383,19 +384,19 @@ function resetWorkbook(workbook) {
             userEnteredValue: {stringValue: 'Running'},
           }, {
             userEnteredValue: {stringValue: moment().format()},
-          }]
+          }],
         }],
-        fields: 'userEnteredValue'
-      }
+        fields: 'userEnteredValue',
+      },
     });
     // Errors
     requests.push({
       updateCells: {
         range: {
-          sheetId: 0
+          sheetId: 0,
         },
-        fields: 'userEnteredValue'
-      }
+        fields: 'userEnteredValue',
+      },
     });
     requests.push({
       updateCells: {
@@ -403,40 +404,40 @@ function resetWorkbook(workbook) {
         rows: [{
           values: [{
             userEnteredValue: {stringValue: 'Source URL'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'Issue'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'Resolved URL'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'Original URL'},
-            userEnteredFormat: {textFormat: {bold: true}}
-          }]
+            userEnteredFormat: {textFormat: {bold: true}},
+          }],
         }],
-        fields: 'userEnteredValue,userEnteredFormat.textFormat'
-      }
+        fields: 'userEnteredValue,userEnteredFormat.textFormat',
+      },
     });
     requests.push({
       updateSheetProperties: {
         properties: {
           sheetId: 0,
           gridProperties: {
-            frozenRowCount: 1
-          }
+            frozenRowCount: 1,
+          },
         },
-        fields: 'gridProperties.frozenRowCount'
-      }
+        fields: 'gridProperties.frozenRowCount',
+      },
     });
     // Pages
     requests.push({
       updateCells: {
         range: {
-          sheetId: 352617043
+          sheetId: 352617043,
         },
-        fields: 'userEnteredValue'
-      }
+        fields: 'userEnteredValue',
+      },
     });
     requests.push({
       updateCells: {
@@ -444,34 +445,34 @@ function resetWorkbook(workbook) {
         rows: [{
           values: [{
             userEnteredValue: {stringValue: 'Source URL'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'Links'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'OK'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'Broken'},
-            userEnteredFormat: {textFormat: {bold: true}}
+            userEnteredFormat: {textFormat: {bold: true}},
           }, {
             userEnteredValue: {stringValue: 'Skipped'},
-            userEnteredFormat: {textFormat: {bold: true}}
-          }]
+            userEnteredFormat: {textFormat: {bold: true}},
+          }],
         }],
-        fields: 'userEnteredValue,userEnteredFormat.textFormat'
-      }
+        fields: 'userEnteredValue,userEnteredFormat.textFormat',
+      },
     });
     requests.push({
       updateSheetProperties: {
         properties: {
           sheetId: 0,
           gridProperties: {
-            frozenRowCount: 1
-          }
+            frozenRowCount: 1,
+          },
         },
-        fields: 'gridProperties.frozenRowCount'
-      }
+        fields: 'gridProperties.frozenRowCount',
+      },
     });
 
     let batchUpdateRequest = {requests: requests};
@@ -479,7 +480,7 @@ function resetWorkbook(workbook) {
     sheets.spreadsheets.batchUpdate({
       auth: authToken,
       spreadsheetId: SPREADSHEET_ID,
-      resource: batchUpdateRequest
+      resource: batchUpdateRequest,
     }, function(err, response) {
       if (err) {
         console.log(chalk.red('resetWorkbook FAILED'), err);

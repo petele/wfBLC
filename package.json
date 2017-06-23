@@ -11,7 +11,7 @@
   "devDependencies": {},
   "private": true,
   "dependencies": {
-    "broken-link-checker": "^0.7.4",
+    "broken-link-checker": "^0.7.6",
     "chalk": "^1.1.3",
     "google-auth-library": "^0.10.0",
     "googleapis": "^16.1.0",

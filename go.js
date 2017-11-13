@@ -11,6 +11,8 @@ const GoogleAuth = require('google-auth-library');
 process.env['NODE_TLS_REJECT_UNAUTHORIZED'] = '0';
 
 const VERBOSE = false;
+const REQUEST_METHOD = 'get';
+const USER_AGENT = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/63.0.3239.30 Safari/537.36';
 const SITE_URL = 'https://web-central.appspot.com/web/';
 const SPREADSHEET_ID = '1ObBKWXu0KQ7yaew8VvG-eArXXyIX64sSSseXRZRADuU';
 const SCOPES = ['https://www.googleapis.com/auth/spreadsheets'];
@@ -48,8 +50,8 @@ let opts = {
   honorRobotExclusions: false,
   rateLimit: 10,
   maxSocketsPerHost: 1,
-  requestMethod: 'get',
-  userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_5) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/60.0.3112.24 Safari/537.36'
+  requestMethod: REQUEST_METHOD,
+  userAgent: USER_AGENT,
 };
 
 function padString(msg) {
